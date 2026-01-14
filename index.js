@@ -14,7 +14,7 @@ const { logAttendance } = require("./sheets/attendance")
 const { setAttendanceChannel, getAttendanceChannel } = require("./config")
 
 // ---------- Bot Ready ----------
-client.once("ready", async () => {
+client.once("clientReady", async () => {
     console.log(`Logged in as ${client.user.tag}`)
     await initSheets()
 
