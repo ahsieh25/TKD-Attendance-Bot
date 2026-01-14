@@ -12,7 +12,7 @@ function scheduleOnce(client, runAt) {
     setTimeout(async () => {
         try {
             const channel = await client.channels.fetch(process.env.CHANNEL_ID)
-            const msg = await channel.send("@everyone Please react 👍 if you’re here!")
+            const msg = await channel.send("@everyone Please like this message if you were at practice today!")
             await msg.react("👍")
             msg.sentAt = new Date(runAt)
             sentMessages.set(msg.id, new Set())
