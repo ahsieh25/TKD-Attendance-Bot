@@ -1,85 +1,73 @@
 require("dotenv").config()
-const express = require("express")
-const { Client, GatewayIntentBits, Partials } = require("discord.js")
-const { scheduleDailyMessage } = require("./scheduleManager")
-const { init, addReaction } = require("./sheets")
-const { commands } = require("./commands")
+const { Client, GatewayIntentBits } = require("discord.js")
+const { initSheets } = require("./sheets/client")
+const { getSchedules } = require("./sheets/schedules")
+const { loadSchedules } = require("./scheduler")
+const { logAttendance } = require("./sheets/attendance")
 
-// Express
-const app = express()
-
-// Discord Client
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.GuildMessageReactions,
-    ],
+        GatewayIntentBits.GuildMessageReactions
+    ]
 })
 
-init().then(() => console.log("Google Sheets initialized"))
-
-// Bot ready
 client.once("ready", async () => {
-    console.log(`Logged in as ${client.user.tag}`)
-
-     const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN)
     try {
-        await rest.put(
-            Routes.applicationCommands(process.env.CLIENT_ID),
-            { body: commands.map(c => c.toJSON()) }
-        )
-        console.log("Slash commands registered")
+        console.log(`Logged in as ${client.user.tag}`)
+
+        await initSheets()
+        const schedules = await getSchedules()
+        loadSchedules(client, schedules)
+
+        console.log(`Loaded ${schedules.length} schedules`)
     } catch (err) {
-        console.error(err)
+        console.error("Startup failure:", err)
+        process.exit(1)
     }
 })
 
-// Handle scheduling command
-client.on("interactionCreate", async interaction => {
-    if (!interaction.isCommand()) return
+const cron = require("node-cron")
 
-    if (interaction.commandName === "schedule") {
-        const hour = interaction.options.getInteger("hour")
-        const minute = interaction.options.getInteger("minute")
-        const skipInput = interaction.options.getString("skip") || ""
-        const skipDates = skipInput.split(",").map(s => s.trim()).filter(Boolean)
-
-        scheduleMessage(
-            client,
-            interaction.guildId,
-            interaction.channelId,
-            hour,
-            minute,
-            skipDates
-        )
-
-        await interaction.reply(`Schedule set for ${hour}:${minute} daily! Exceptions: ${skipDates.join(", ") || "None"}`)
+// Schedule daily reload at 00:00 (midnight server time)
+cron.schedule("0 0 * * *", async () => {
+    try {
+        const schedules = await getSchedules()
+        loadSchedules(client, schedules)
+        console.log(`[${new Date().toLocaleString()}] Daily schedule reload complete. Loaded ${schedules.length} schedules.`)
+    } catch (err) {
+        console.error("Daily schedule reload failed:", err)
     }
 })
 
-// Reaction handling
+const { sentMessages } = require("./scheduler")
+
 client.on("messageReactionAdd", async (reaction, user) => {
-    try {
-        if (user.bot) return
-        if (reaction.partial) await reaction.fetch()
+    if (user.bot) return
+    if (reaction.partial) await reaction.fetch()
+    if (reaction.emoji.name !== "👍") return
 
-        if (reaction.emoji.name === "👍") {
-            const member = await reaction.message.guild.members.fetch(user.id)
-            await addToSheet(member.displayName)
-        }
-    } catch (err) {
-        console.error("Reaction handler error:", err)
+    const msg = reaction.message
+
+    // Only process messages that we sent
+    if (!sentMessages.has(msg.id)) return
+
+    const member = await msg.guild.members.fetch(user.id)
+
+    const usersSet = sentMessages.get(msg.id)
+
+    if (usersSet.has(user.id)) {
+        // Already logged
+        return
     }
-})
 
-// Keep alive
-app.get("/", (req, res) => {
-    res.send("Bot running")
-})
+    // Mark user as logged for this message
+    usersSet.add(user.id)
 
-app.listen(process.env.PORT, () => {
-    console.log(`Server running on ${process.env.PORT}`)
+    // Log attendance using the message's sentAt date
+    const attendanceDate = msg.sentAt || new Date()
+    await logAttendance(member.displayName, attendanceDate)
 })
 
 client.login(process.env.DISCORD_TOKEN)

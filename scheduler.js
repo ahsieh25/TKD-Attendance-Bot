@@ -1,35 +1,30 @@
-const cron = require("node-cron")
-const scheduledJobs = {}
+const { logAttendance } = require("./sheets/attendance")
 
-/**
- * Schedule a daily message for a guild
- * @param {Client} client Discord.js client
- * @param {string} guildId Guild ID
- * @param {string} channelId Channel ID
- * @param {number} hour 0-23
- * @param {number} minute 0-59
- * @param {Array<string>} skipDates Array of YYYY-MM-DD to skip
- */
-function scheduleMessage(client, guildId, channelId, hour, minute, skipDates = []) {
-    // Cancel previous job if exists
-    if (scheduledJobs[guildId]) scheduledJobs[guildId].stop()
+const scheduledTimes = new Set() // prevent duplicate messages
+const sentMessages = new Map()   // msg.id -> Set of userIds
 
-    const cronTime = `${minute} ${hour} * * *`
-    const job = cron.schedule(cronTime, async () => {
-        const today = new Date().toISOString().split("T")[0]
-        if (skipDates.includes(today)) return // Skip exceptions
+function scheduleOnce(client, runAt) {
+    const delay = runAt - Date.now()
+    if (delay <= 0) return
+    if (scheduledTimes.has(runAt.getTime())) return
+    scheduledTimes.add(runAt.getTime())
 
+    setTimeout(async () => {
         try {
-            const channel = await client.channels.fetch(channelId)
-            const message = await channel.send("@everyone Please like this message if you were at practice today!")
-            await message.react("👍")
-            console.log(`Scheduled message sent in guild ${guildId} on ${today}`)
+            const channel = await client.channels.fetch(process.env.CHANNEL_ID)
+            const msg = await channel.send("@everyone Please react 👍 if you’re here!")
+            await msg.react("👍")
+            msg.sentAt = new Date(runAt)
+            sentMessages.set(msg.id, new Set())
+            console.log("Message sent at", runAt)
         } catch (err) {
             console.error("Error sending scheduled message:", err)
         }
-    })
-
-    scheduledJobs[guildId] = job
+    }, delay)
 }
 
-module.exports = { scheduleMessage }
+function loadSchedules(client, dates) {
+    dates.forEach(runAt => scheduleOnce(client, runAt))
+}
+
+module.exports = { loadSchedules, scheduleOnce, scheduledTimes, sentMessages }
