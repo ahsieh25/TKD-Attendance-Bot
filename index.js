@@ -97,3 +97,11 @@ cron.schedule("0 0 * * *", async () => {
         console.error("Daily schedule reload failed:", err)
     }
 })
+
+const express = require("express")
+const app = express()
+const PORT = process.env.PORT
+
+app.get("/", (req, res) => res.send("Bot is running!"))
+
+app.listen(PORT, () => console.log(`HTTP server listening on port ${PORT}`))
