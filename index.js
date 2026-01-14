@@ -1,36 +1,93 @@
 require("dotenv").config()
-const { Client, GatewayIntentBits } = require("discord.js")
+const { Client, GatewayIntentBits, SlashCommandBuilder } = require("discord.js")
+const client = new Client({ intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMessageReactions
+]})
+
 const { initSheets } = require("./sheets/client")
 const { getSchedules } = require("./sheets/schedules")
-const { loadSchedules } = require("./scheduler")
+const { loadSchedules, sentMessages } = require("./scheduler")
 const { logAttendance } = require("./sheets/attendance")
+const { setAttendanceChannel, getAttendanceChannel } = require("./config")
 
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.GuildMessageReactions
-    ]
+// ---------- Bot Ready ----------
+client.once("ready", async () => {
+    console.log(`Logged in as ${client.user.tag}`)
+    await initSheets()
+
+    // Load schedules on startup
+    const schedules = await getSchedules()
+    loadSchedules(client, schedules)
+    console.log(`Loaded ${schedules.length} schedules`)
+
+    // Register commands
+    await client.application.commands.set([
+        new SlashCommandBuilder()
+            .setName("reload")
+            .setDescription("Reload schedules from Google Sheets"),
+        new SlashCommandBuilder()
+            .setName("setchannel")
+            .setDescription("Set this channel as the attendance channel")
+    ])
+    console.log("Commands registered")
 })
 
-client.once("ready", async () => {
-    try {
-        console.log(`Logged in as ${client.user.tag}`)
+// ---------- Reaction Handling ----------
+client.on("messageReactionAdd", async (reaction, user) => {
+    if (user.bot) return
+    if (reaction.partial) await reaction.fetch()
+    if (reaction.emoji.name !== "👍") return
 
-        await initSheets()
-        const schedules = await getSchedules()
-        loadSchedules(client, schedules)
+    const msg = reaction.message
+    if (!sentMessages.has(msg.id)) return
 
-        console.log(`Loaded ${schedules.length} schedules`)
-    } catch (err) {
-        console.error("Startup failure:", err)
-        process.exit(1)
+    const member = await msg.guild.members.fetch(user.id)
+    const usersSet = sentMessages.get(msg.id)
+    if (usersSet.has(user.id)) return // already logged
+
+    usersSet.add(user.id)
+    const attendanceDate = msg.sentAt || new Date()
+    await logAttendance(member.displayName, attendanceDate)
+})
+
+// ---------- Slash Command Handling ----------
+client.on("interactionCreate", async (interaction) => {
+    if (!interaction.isCommand()) return
+
+    if (interaction.commandName === "reload") {
+        if (!interaction.member.permissions.has("Administrator")) {
+            return interaction.reply("You must be an admin to run this command.")
+        }
+
+        try {
+            const schedules = await getSchedules()
+            loadSchedules(client, schedules)
+            interaction.reply(`Reloaded ${schedules.length} schedules.`)
+        } catch (err) {
+            console.error(err)
+            interaction.reply("Failed to reload schedules: " + err.message)
+        }
+    }
+
+    if (interaction.commandName === "setchannel") {
+        if (!interaction.member.permissions.has("Administrator")) {
+            return interaction.reply("You must be an admin to run this command.")
+        }
+
+        const channelId = interaction.channelId
+        setAttendanceChannel(channelId)
+        interaction.reply(`This channel has been set as the attendance channel.`)
+        console.log(`Attendance channel set to ${channelId}`)
     }
 })
 
-const cron = require("node-cron")
+client.login(process.env.DISCORD_TOKEN)
 
-// Schedule daily reload at 00:00 (midnight server time)
+// ---------- Optional: daily automatic reload ----------
+const cron = require("node-cron")
 cron.schedule("0 0 * * *", async () => {
     try {
         const schedules = await getSchedules()
@@ -40,34 +97,3 @@ cron.schedule("0 0 * * *", async () => {
         console.error("Daily schedule reload failed:", err)
     }
 })
-
-const { sentMessages } = require("./scheduler")
-
-client.on("messageReactionAdd", async (reaction, user) => {
-    if (user.bot) return
-    if (reaction.partial) await reaction.fetch()
-    if (reaction.emoji.name !== "👍") return
-
-    const msg = reaction.message
-
-    // Only process messages that we sent
-    if (!sentMessages.has(msg.id)) return
-
-    const member = await msg.guild.members.fetch(user.id)
-
-    const usersSet = sentMessages.get(msg.id)
-
-    if (usersSet.has(user.id)) {
-        // Already logged
-        return
-    }
-
-    // Mark user as logged for this message
-    usersSet.add(user.id)
-
-    // Log attendance using the message's sentAt date
-    const attendanceDate = msg.sentAt || new Date()
-    await logAttendance(member.displayName, attendanceDate)
-})
-
-client.login(process.env.DISCORD_TOKEN)
