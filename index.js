@@ -13,7 +13,7 @@ const { loadSchedules, sentMessages } = require("./scheduler")
 const { logAttendance } = require("./sheets/attendance")
 const { setAttendanceChannel, getAttendanceChannel } = require("./config")
 
-// ---------- Bot Ready ----------
+// Bot Ready
 client.once("clientReady", async () => {
     console.log(`Logged in as ${client.user.tag}`)
     await initSheets()
@@ -35,7 +35,7 @@ client.once("clientReady", async () => {
     console.log("Commands registered")
 })
 
-// ---------- Reaction Handling ----------
+// Reaction Handling
 client.on("messageReactionAdd", async (reaction, user) => {
     if (user.bot) return
     if (reaction.partial) await reaction.fetch()
@@ -53,7 +53,7 @@ client.on("messageReactionAdd", async (reaction, user) => {
     await logAttendance(member.displayName, attendanceDate)
 })
 
-// ---------- Slash Command Handling ----------
+// Command Handling
 client.on("interactionCreate", async (interaction) => {
     if (!interaction.isCommand()) return
 
@@ -86,7 +86,7 @@ client.on("interactionCreate", async (interaction) => {
 
 client.login(process.env.DISCORD_TOKEN)
 
-// ---------- Optional: daily automatic reload ----------
+// Automatic Reschedule
 const cron = require("node-cron")
 cron.schedule("0 0 * * *", async () => {
     try {

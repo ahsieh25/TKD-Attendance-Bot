@@ -1,18 +1,38 @@
 const { doc } = require("./client")
 
 function parseSchedule(dateValue, timeValue) {
-    const datePart = dateValue
-    const timePart = timeValue
-    if (!datePart || !timePart) throw new Error(`Invalid schedule format: "${dateValue, timeValue}"`)
+    if (!dateValue || !timeValue) {
+        throw new Error("Missing date or time")
+    }
 
-    const [month, day, year] = datePart.split("/").map(Number)
-    const [hour, minute] = timePart.split(":").map(Number)
+    let month, day, year
 
-    const fullYear = year < 100 ? 2000 + year : year
-    const dateObj = new Date(fullYear, month - 1, day, hour, minute, 0, 0)
-    if (isNaN(dateObj.getTime())) throw new Error(`Invalid schedule date: "${dateValue, timeValue}"`)
+    // Handle Google Sheets Date objects
+    if (dateValue instanceof Date) {
+        month = dateValue.getMonth() + 1
+        day = dateValue.getDate()
+        year = dateValue.getFullYear()
+    } else {
+        const parts = String(dateValue).split("/")
+        if (parts.length !== 3) {
+            throw new Error("Invalid date format")
+        }
+        month = Number(parts[0])
+        day = Number(parts[1])
+        year = Number(parts[2]) < 100 ? 2000 + Number(parts[2]) : Number(parts[2])
+    }
+
+    const [hour, minute] = String(timeValue).split(":").map(Number)
+
+    const dateObj = new Date(year, month - 1, day, hour, minute, 0, 0)
+
+    if (isNaN(dateObj.getTime())) {
+        throw new Error("Invalid date object")
+    }
+
     return dateObj
 }
+
 
 async function getSchedules() {
     const sheet = doc.sheetsByTitle["Schedules"]
