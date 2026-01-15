@@ -4,12 +4,9 @@ function parseSchedule(dateValue, timeValue) {
     const datePart = dateValue
     const timePart = timeValue
     if (!datePart || !timePart) throw new Error(`Invalid schedule format`)
-
-    const dateObj = new Date(year, month - 1, day, hour, minute, 0, 0)
-
-    if (isNaN(dateObj.getTime())) {
-        throw new Error("Invalid date object")
-    }
+        
+    const [month, day, year] = datePart.split("/").map(Number)
+    const [hour, minute] = timePart.split(":").map(Number)
 
     const fullYear = year < 100 ? 2000 + year : year
     const dateObj = new Date(fullYear, month - 1, day, hour, minute, 0, 0)
