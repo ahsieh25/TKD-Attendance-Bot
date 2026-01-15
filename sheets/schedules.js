@@ -5,8 +5,11 @@ function parseSchedule(dateValue, timeValue) {
     const timePart = timeValue
     if (!datePart || !timePart) throw new Error(`Invalid schedule format`)
 
-    const [month, day, year] = datePart.split("/").map(Number)
-    const [hour, minute] = timePart.split(":").map(Number)
+    const dateObj = new Date(year, month - 1, day, hour, minute, 0, 0)
+
+    if (isNaN(dateObj.getTime())) {
+        throw new Error("Invalid date object")
+    }
 
     const fullYear = year < 100 ? 2000 + year : year
     const dateObj = new Date(fullYear, month - 1, day, hour, minute, 0, 0)
@@ -14,11 +17,14 @@ function parseSchedule(dateValue, timeValue) {
     return dateObj
 }
 
+
 async function getSchedules() {
+    await doc.loadInfo()
     const sheet = doc.sheetsByTitle["Schedules"]
     if (!sheet) throw new Error("Missing 'Schedules' sheet")
-
+    await sheet.loadCells()
     const rows = await sheet.getRows()
+    console.log("Rows:", rows.map(r => r._rawData))
     const schedules = []
 
     for (const row of rows) {
