@@ -3,8 +3,20 @@ const { getAttendanceChannel } = require("./config")
 
 const scheduledTimes = new Set()
 const sentMessages = new Map()
+let scheduledTimeouts = []   // <-- track active timeouts
 
 const MAX_TIMEOUT = 1_000_000_000
+
+function clearSchedules() {
+    console.log("Clearing existing schedules...")
+
+    for (const timeout of scheduledTimeouts) {
+        clearTimeout(timeout)
+    }
+
+    scheduledTimeouts = []
+    scheduledTimes.clear()
+}
 
 function scheduleOnce(client, runAt) {
     const delay = runAt - Date.now()
@@ -21,7 +33,7 @@ function scheduleOnce(client, runAt) {
     if (scheduledTimes.has(runAt.getTime())) return
     scheduledTimes.add(runAt.getTime())
 
-    setTimeout(async () => {
+    const timeout = setTimeout(async () => {
         try {
             const channelId = getAttendanceChannel()
             if (!channelId) return
@@ -36,10 +48,23 @@ function scheduleOnce(client, runAt) {
             console.error(err)
         }
     }, delay)
+
+    scheduledTimeouts.push(timeout)   // <-- store it
 }
 
 function loadSchedules(client, dates) {
+    clearSchedules()                 // <-- THIS is the key fix
+
+    console.log("Loading schedules:", dates)
+
     dates.forEach(runAt => scheduleOnce(client, runAt))
+
+    console.log("Total active schedules:", scheduledTimeouts.length)
 }
 
-module.exports = { loadSchedules, scheduleOnce, scheduledTimes, sentMessages }
+module.exports = { 
+    loadSchedules, 
+    scheduleOnce, 
+    scheduledTimes, 
+    sentMessages 
+}
