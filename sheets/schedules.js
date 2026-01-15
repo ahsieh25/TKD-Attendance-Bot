@@ -15,31 +15,17 @@ function parseSchedule(dateValue, timeValue) {
 }
 
 async function getSchedules() {
-    await doc.loadInfo()
-
     const sheet = doc.sheetsByTitle["Schedules"]
     if (!sheet) throw new Error("Missing 'Schedules' sheet")
 
     const rows = await sheet.getRows()
-
-    console.log("TOTAL ROWS:", rows.length)
-
-    if (rows.length > 0) {
-        console.log("FIRST ROW RAW:", rows[0]._rawData)
-    }
-
     const schedules = []
 
     for (const row of rows) {
-        console.log("ROW DATA:", row._rawData)
-
         const dateValue = row._rawData[0]
         const timeValue = row._rawData[1]
-
-        if (!dateValue || !timeValue) {
-            console.log("SKIPPED ROW:", row._rawData)
-            continue
-        }
+        console.log("Row Values: ", dateValue, timeValue)
+        if (!dateValue || !timeValue) continue
 
         try {
             schedules.push(parseSchedule(dateValue, timeValue))
@@ -50,6 +36,5 @@ async function getSchedules() {
 
     return schedules
 }
-
 
 module.exports = { getSchedules }
