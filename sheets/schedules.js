@@ -35,6 +35,7 @@ function parseSchedule(dateValue, timeValue) {
 
 
 async function getSchedules() {
+    await doc.loadInfo()
     const sheet = doc.sheetsByTitle["Schedules"]
     if (!sheet) throw new Error("Missing 'Schedules' sheet")
 
