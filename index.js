@@ -64,6 +64,7 @@ client.on("interactionCreate", async (interaction) => {
 
         try {
             const schedules = await getSchedules()
+            console.log("Schedules found:", schedules)
             loadSchedules(client, schedules)
             interaction.reply(`Reloaded ${schedules.length} schedules.`)
         } catch (err) {
