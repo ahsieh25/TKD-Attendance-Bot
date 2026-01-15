@@ -1,7 +1,8 @@
 const { doc } = require("./client")
 
-function parseSchedule(cellValue) {
-    const [datePart, timePart] = cellValue.split(";").map(s => s.trim())
+function parseSchedule(dateValue, timeValue) {
+    const datePart = dateValue
+    const timePart = timeValue
     if (!datePart || !timePart) throw new Error(`Invalid schedule format: "${cellValue}"`)
 
     const [month, day, year] = datePart.split("/").map(Number)
@@ -21,13 +22,14 @@ async function getSchedules() {
     const schedules = []
 
     for (const row of rows) {
-        const cellValue = row._rawData[0] // first column
-        if (!cellValue) continue
+        const dateValue = row._rawData[0]
+        const timeValue = row._rawData[1]
+        if (!dateValue || !timeValue) continue
 
         try {
-            schedules.push(parseSchedule(cellValue))
+            schedules.push(parseSchedule(dateValue, timeValue))
         } catch (err) {
-            console.warn("Skipping invalid schedule:", cellValue)
+            console.warn("Skipping invalid schedule:", dateValue, timeValue)
         }
     }
 
