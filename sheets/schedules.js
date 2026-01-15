@@ -38,7 +38,7 @@ async function getSchedules() {
     await doc.loadInfo()
     const sheet = doc.sheetsByTitle["Schedules"]
     if (!sheet) throw new Error("Missing 'Schedules' sheet")
-
+    await sheet.loadCells()
     const rows = await sheet.getRows()
     const schedules = []
 
