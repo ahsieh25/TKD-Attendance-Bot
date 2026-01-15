@@ -3,7 +3,7 @@ const { getAttendanceChannel } = require("./config")
 
 const scheduledTimes = new Set()
 const sentMessages = new Map()
-let scheduledTimeouts = []   // <-- track active timeouts
+let scheduledTimeouts = []
 
 const MAX_TIMEOUT = 1_000_000_000
 
@@ -49,11 +49,11 @@ function scheduleOnce(client, runAt) {
         }
     }, delay)
 
-    scheduledTimeouts.push(timeout)   // <-- store it
+    scheduledTimeouts.push(timeout)
 }
 
 function loadSchedules(client, dates) {
-    clearSchedules()                 // <-- THIS is the key fix
+    clearSchedules()
 
     console.log("Loading schedules:", dates)
 
