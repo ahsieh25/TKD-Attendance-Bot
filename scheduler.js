@@ -1,67 +1,67 @@
-const { logAttendance } = require("./sheets/attendance")
 const { getAttendanceChannel } = require("./config")
 
-const scheduledTimes = new Set()
 const sentMessages = new Map()
-let scheduledTimeouts = []
 
-const MAX_TIMEOUT = 1_000_000_000
+// Tracks which schedule times have already been sent
+const sentScheduleTimes = new Set()
 
-function clearSchedules() {
-    console.log("Clearing existing schedules...")
+/**
+ * Checks schedules and sends messages if within time window
+ */
+async function checkAndSendSchedules(client, schedules) {
+  const now = Date.now()
+  const WINDOW = 2 * 60 * 1000 // 2 minutes
 
-    for (const timeout of scheduledTimeouts) {
-        clearTimeout(timeout)
-    }
+  for (const runAt of schedules) {
+    const diff = Math.abs(runAt - now)
 
-    scheduledTimeouts = []
-    scheduledTimes.clear()
-}
+    // Only trigger close to scheduled time
+    if (diff <= WINDOW) {
+      if (sentScheduleTimes.has(runAt.getTime())) {
+        console.log("Already sent for:", runAt)
+        continue
+      }
 
-function scheduleOnce(client, runAt) {
-    const delay = runAt - Date.now()
-    if (delay <= 0) return
+      console.log("Sending attendance message for:", runAt)
 
-    // Too far in the future
-    if (delay > MAX_TIMEOUT) {
-        return
-    }
+      sentScheduleTimes.add(runAt.getTime())
 
-    console.log("Scheduling for:", runAt.toString(), "Delay:", delay)
-
-    if (scheduledTimes.has(runAt.getTime())) return
-    scheduledTimes.add(runAt.getTime())
-
-    const timeout = setTimeout(async () => {
-    try {
+      try {
         const channelId = getAttendanceChannel()
-        console.log("Scheduling message in channel:", channelId, "at", new Date(runAt))
-        if (!channelId) return console.warn("No attendance channel set!")
+        if (!channelId) {
+          console.warn("No attendance channel set!")
+          return
+        }
+
         const channel = await client.channels.fetch(channelId)
-        const msg = await channel.send("@everyone Please like this message if you were at practice today!")
-        console.log("Message sent, ID:", msg.id)
+
+        const msg = await channel.send(
+          "@everyone Please like this message if you were at practice today!"
+        )
+
         await msg.react("👍")
+
         msg.sentAt = new Date(runAt)
         sentMessages.set(msg.id, new Set())
-    } catch (err) {
+
+        console.log("Attendance message sent. ID:", msg.id)
+      } catch (err) {
         console.error("Failed to send attendance message:", err)
+      }
     }
-}, delay)
-
-
-    scheduledTimeouts.push(timeout)
+  }
 }
 
-function loadSchedules(client, dates) {
-    clearSchedules()
-    dates.forEach(runAt => scheduleOnce(client, runAt))
-
-    console.log("Total active schedules:", scheduledTimeouts.length)
+/**
+ * Clears old sent schedule records (optional cleanup)
+ */
+function clearSentSchedules() {
+  sentScheduleTimes.clear()
+  console.log("Cleared sent schedule history")
 }
 
-module.exports = { 
-    loadSchedules, 
-    scheduleOnce, 
-    scheduledTimes, 
-    sentMessages 
+module.exports = {
+  checkAndSendSchedules,
+  clearSentSchedules,
+  sentMessages
 }

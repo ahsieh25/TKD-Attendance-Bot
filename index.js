@@ -9,9 +9,10 @@ const client = new Client({ intents: [
 
 const { initSheets } = require("./sheets/client")
 const { getSchedules } = require("./sheets/schedules")
-const { loadSchedules, sentMessages } = require("./scheduler")
 const { logAttendance } = require("./sheets/attendance")
 const { setAttendanceChannel, getAttendanceChannel } = require("./config")
+const cron = require("node-cron")
+const { checkAndSendSchedules, sentMessages} = require("./scheduler")
 
 // Bot Ready
 client.once("clientReady", async () => {
@@ -20,7 +21,7 @@ client.once("clientReady", async () => {
 
     // Load schedules on startup
     const schedules = await getSchedules()
-    loadSchedules(client, schedules)
+    checkAndSendSchedules(client, schedules)
     console.log(`Loaded ${schedules.length} schedules`)
 
     // Register commands
@@ -64,7 +65,7 @@ client.on("interactionCreate", async (interaction) => {
 
         try {
             const schedules = await getSchedules()
-            loadSchedules(client, schedules)
+            checkAndSendSchedules(client, schedules)
             interaction.reply(`Reloaded ${schedules.length} schedules.`)
         } catch (err) {
             console.error(err)
@@ -87,16 +88,20 @@ client.on("interactionCreate", async (interaction) => {
 client.login(process.env.DISCORD_TOKEN)
 
 // Automatic Reschedule
-const cron = require("node-cron")
-cron.schedule("0 0 * * *", async () => {
-    try {
-        const schedules = await getSchedules()
-        loadSchedules(client, schedules)
-        console.log(`[${new Date().toLocaleString()}] Daily schedule reload complete. Loaded ${schedules.length} schedules.`)
-    } catch (err) {
-        console.error("Daily schedule reload failed:", err)
-    }
+
+cron.schedule("*/5 * * * *", async () => {
+  try {
+    const schedules = await getSchedules()
+    await checkAndSendSchedules(client, schedules)
+
+    console.log(
+      `[${new Date().toLocaleString()}] Schedule check complete.`
+    )
+  } catch (err) {
+    console.error("Schedule check failed:", err)
+  }
 })
+
 
 const express = require("express")
 const app = express()
