@@ -32,20 +32,27 @@ function scheduleOnce(client, runAt) {
     scheduledTimes.add(runAt.getTime())
 
     const timeout = setTimeout(async () => {
-        try {
-            const channelId = getAttendanceChannel()
-            if (!channelId) return
+    try {
+        const channelId = getAttendanceChannel()
+        console.log("Scheduling message in channel:", channelId, "at", new Date(runAt))
+        if (!channelId) return console.warn("No attendance channel set!")
 
-            const channel = await client.channels.fetch(channelId)
-            const msg = await channel.send("@everyone Please like this message if you were at practice today!")
-            await msg.react("👍")
+        const channel = await client.channels.fetch(channelId)
+        console.log("Fetched channel:", channel.name)
 
-            msg.sentAt = new Date(runAt)
-            sentMessages.set(msg.id, new Set())
-        } catch (err) {
-            console.error(err)
-        }
-    }, delay)
+        const msg = await channel.send("@everyone Please like this message if you were at practice today!")
+        console.log("Message sent, ID:", msg.id)
+
+        await msg.react("👍")
+        console.log("Reaction added")
+
+        msg.sentAt = new Date(runAt)
+        sentMessages.set(msg.id, new Set())
+    } catch (err) {
+        console.error("Failed to send attendance message:", err)
+    }
+}, delay)
+
 
     scheduledTimeouts.push(timeout)
 }
