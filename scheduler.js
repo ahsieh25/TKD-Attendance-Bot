@@ -24,7 +24,6 @@ function scheduleOnce(client, runAt) {
 
     // Too far in the future
     if (delay > MAX_TIMEOUT) {
-        console.log("Schedule too far out, will be picked up later:", runAt)
         return
     }
 
@@ -36,16 +35,10 @@ function scheduleOnce(client, runAt) {
         const channelId = getAttendanceChannel()
         console.log("Scheduling message in channel:", channelId, "at", new Date(runAt))
         if (!channelId) return console.warn("No attendance channel set!")
-
         const channel = await client.channels.fetch(channelId)
-        console.log("Fetched channel:", channel.name)
-
         const msg = await channel.send("@everyone Please like this message if you were at practice today!")
         console.log("Message sent, ID:", msg.id)
-
         await msg.react("👍")
-        console.log("Reaction added")
-
         msg.sentAt = new Date(runAt)
         sentMessages.set(msg.id, new Set())
     } catch (err) {
@@ -59,8 +52,6 @@ function scheduleOnce(client, runAt) {
 
 function loadSchedules(client, dates) {
     clearSchedules()
-
-    console.log("Loading schedules:", dates)
 
     dates.forEach(runAt => scheduleOnce(client, runAt))
 

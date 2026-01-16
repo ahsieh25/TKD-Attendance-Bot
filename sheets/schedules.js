@@ -21,13 +21,11 @@ async function getSchedules() {
     if (!sheet) throw new Error("Missing 'Schedules' sheet")
     await sheet.loadCells()
     const rows = await sheet.getRows()
-    console.log("Rows:", rows.map(r => r._rawData))
     const schedules = []
 
     for (const row of rows) {
         const dateValue = row._rawData[0]
         const timeValue = row._rawData[1]
-        console.log("Row Values: ", dateValue, timeValue)
         if (!dateValue || !timeValue) continue
 
         try {

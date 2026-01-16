@@ -46,7 +46,7 @@ client.on("messageReactionAdd", async (reaction, user) => {
 
     const member = await msg.guild.members.fetch(user.id)
     const usersSet = sentMessages.get(msg.id)
-    if (usersSet.has(user.id)) return // already logged
+    if (usersSet.has(user.id)) return
 
     usersSet.add(user.id)
     const attendanceDate = msg.sentAt || new Date()
