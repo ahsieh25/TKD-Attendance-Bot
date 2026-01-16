@@ -27,6 +27,8 @@ function scheduleOnce(client, runAt) {
         return
     }
 
+    console.log("Scheduling for:", runAt.toString(), "Delay:", delay)
+
     if (scheduledTimes.has(runAt.getTime())) return
     scheduledTimes.add(runAt.getTime())
 

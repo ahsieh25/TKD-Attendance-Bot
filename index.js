@@ -64,7 +64,6 @@ client.on("interactionCreate", async (interaction) => {
 
         try {
             const schedules = await getSchedules()
-            console.log("Schedules found:", schedules)
             loadSchedules(client, schedules)
             interaction.reply(`Reloaded ${schedules.length} schedules.`)
         } catch (err) {
@@ -106,3 +105,5 @@ const PORT = process.env.PORT
 app.get("/", (req, res) => res.send("Bot is running!"))
 
 app.listen(PORT, () => console.log(`HTTP server listening on port ${PORT}`))
+
+scheduleOnce(client, new Date(Date.now() + 10_000))
