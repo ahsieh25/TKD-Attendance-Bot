@@ -3,7 +3,7 @@ const { getAttendanceChannel } = require("./config")
 
 const scheduledTimes = new Set()
 const sentMessages = new Map()
-let scheduledTimeouts = []   // <-- track active timeouts
+let scheduledTimeouts = []
 
 const MAX_TIMEOUT = 1_000_000_000
 
@@ -24,7 +24,7 @@ function scheduleOnce(client, runAt) {
     // Skip past dates
     if (delay <= 0) return
 
-    // Too far in the future → wait for daily reload
+    // Too far in the future
     if (delay > MAX_TIMEOUT) {
         console.log("Schedule too far out, will be picked up later:", runAt)
         return
@@ -49,11 +49,11 @@ function scheduleOnce(client, runAt) {
         }
     }, delay)
 
-    scheduledTimeouts.push(timeout)   // <-- store it
+    scheduledTimeouts.push(timeout)
 }
 
 function loadSchedules(client, dates) {
-    clearSchedules()                 // <-- THIS is the key fix
+    clearSchedules()
 
     console.log("Loading schedules:", dates)
 
