@@ -54,7 +54,6 @@ function scheduleOnce(client, runAt) {
 
 function loadSchedules(client, dates) {
     clearSchedules()
-    scheduleOnce(client, new Date(Date.now() + 10_000))
     dates.forEach(runAt => scheduleOnce(client, runAt))
 
     console.log("Total active schedules:", scheduledTimeouts.length)
