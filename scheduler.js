@@ -20,8 +20,6 @@ function clearSchedules() {
 
 function scheduleOnce(client, runAt) {
     const delay = runAt - Date.now()
-
-    // Skip past dates
     if (delay <= 0) return
 
     // Too far in the future
