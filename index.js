@@ -10,8 +10,8 @@ const client = new Client({ intents: [
 const { initSheets } = require("./sheets/client")
 const { getSchedules } = require("./sheets/schedules")
 const { logAttendance } = require("./sheets/attendance")
-const { setAttendanceChannel, getAttendanceChannel } = require("./config")
-const cron = require("node-cron")
+const { setAttendanceChannel } = require("./config")
+
 const { checkAndSendSchedules, sentMessages} = require("./scheduler")
 
 // Bot Ready
@@ -86,22 +86,6 @@ client.on("interactionCreate", async (interaction) => {
 })
 
 client.login(process.env.DISCORD_TOKEN)
-
-// Automatic Reschedule
-
-cron.schedule("*/5 * * * *", async () => {
-  try {
-    const schedules = await getSchedules()
-    await checkAndSendSchedules(client, schedules)
-
-    console.log(
-      `[${new Date().toLocaleString()}] Schedule check complete.`
-    )
-  } catch (err) {
-    console.error("Schedule check failed:", err)
-  }
-})
-
 
 const express = require("express")
 const app = express()
