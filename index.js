@@ -87,6 +87,19 @@ client.on("interactionCreate", async (interaction) => {
 
 client.login(process.env.DISCORD_TOKEN)
 
+const cron = require("node-cron")
+
+cron.schedule("* * * * *", async () => {
+  try {
+    const schedules = await getSchedules()
+    await checkAndSendSchedules(client, schedules)
+    console.log(`[${new Date().toLocaleString()}] Schedule check ran`)
+  } catch (err) {
+    console.error("Schedule check failed:", err)
+  }
+})
+
+
 const express = require("express")
 const app = express()
 const PORT = process.env.PORT

@@ -1,4 +1,4 @@
-let attendanceChannelId = null
+let attendanceChannelId = process.env.CHANNEL_ID
 
 function setAttendanceChannel(id) {
     attendanceChannelId = id
